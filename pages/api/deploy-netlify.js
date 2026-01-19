@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🔹 Ambil raw body
+    // 🔹 ambil raw JSON body
     const buffers = [];
     for await (const chunk of req) buffers.push(chunk);
     const body = JSON.parse(Buffer.concat(buffers).toString());
@@ -25,15 +25,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'index.html wajib ada' });
     }
 
-    // 🔹 Buat ZIP
+    // 🔹 buat ZIP
     const zip = new JSZip();
     for (const path in files) {
       zip.file(path, files[path]);
     }
-
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
-    // 🔹 Buat site baru
+    // 🔹 buat site
     const siteRes = await fetch('https://api.netlify.com/api/v1/sites', {
       method: 'POST',
       headers: {
@@ -45,7 +44,7 @@ export default async function handler(req, res) {
 
     const site = await siteRes.json();
 
-    // 🔹 Deploy ZIP (INI KUNCI UTAMA)
+    // 🔹 upload ZIP
     const deployRes = await fetch(
       `https://api.netlify.com/api/v1/sites/${site.id}/deploys`,
       {
@@ -58,8 +57,25 @@ export default async function handler(req, res) {
       }
     );
 
-    const deploy = await deployRes.json();
+    let deploy = await deployRes.json();
 
+    // 🔁 POLLING sampai READY
+    while (deploy.state !== 'ready') {
+      await new Promise(r => setTimeout(r, 1500));
+
+      const check = await fetch(
+        `https://api.netlify.com/api/v1/deploys/${deploy.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${NETLIFY_TOKEN}`
+          }
+        }
+      );
+
+      deploy = await check.json();
+    }
+
+    // ✅ SEKARANG URL SUDAH ADA
     res.json({
       url: deploy.ssl_url,
       state: deploy.state
