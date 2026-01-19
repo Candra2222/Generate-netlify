@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Create Link Netlify</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+.box {
+  background: #fff;
+  max-width: 480px;
+  margin: auto;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.2);
+}
+h3 { text-align: center; }
+input, textarea, button {
+  width: 100%;
+  margin-top: 10px;
+}
+button {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+button:hover { background: #4338ca; }
+textarea { height: 70px; }
+small { color: #555; }
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h3>GENERATE LANDING PAGE</h3>
+
+  <input type="file" id="files" multiple>
+  <small>Minimal harus ada <b>index.html</b></small>
+
+  <button onclick="deploy()">CREATE HERE</button>
+
+  <textarea id="result" placeholder="URL hasil deploy"></textarea>
+</div>
+
+<script>
+async function deploy() {
+  const input = document.getElementById('files');
+  if (!input.files.length) return alert('Pilih file dulu');
+
+  const files = {};
+  for (const file of input.files) {
+    files[file.name] = await file.text();
+  }
+
+  const res = await fetch('/api/deploy-netlify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files })
+  });
+
+  const data = await res.json();
+  if (data.url) {
+    document.getElementById('result').value = data.url;
+  } else {
+    alert(JSON.stringify(data, null, 2));
+  }
+}
+</script>
+
+</body>
+</html>
